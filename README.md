@@ -21,7 +21,7 @@ integrated or pushed.
 | Policy engine (per-tx cap, daily cap, second-confirmation threshold, blocklist) | ✅ Built, 100% line coverage |
 | Deterministic wallet derivation (app-managed test wallet) | ✅ Built, 100% line coverage |
 | Microsoft Graph webhook ingestion (validation handshake, notification auth/dedupe, subscription lifecycle) | ✅ Logic built + unit tested (100% on pure modules); `graph/client.ts` wraps the real SDK and needs a live Azure AD tenant to integration-test |
-| Agent loop (LLM tool-calling) | ⏳ Not started |
+| Agent loop (LLM tool-calling: check_duplicate → check_policy_limits → create_invoice) | ✅ Logic built + unit tested (100% on the loop itself, ~99% overall); `agent/anthropicClient.ts` wraps the real SDK and needs an API key to integration-test |
 | ENSv2 subname + Enhanced Access Control (role math, name encoding, `chainmail.proposal` record) | ✅ Logic built + unit tested (~99% on pure modules); `ens/client.ts` wraps real on-chain calls and needs a live Sepolia RPC + ABI verification to integration-test |
 | Ledger (live draft) + folder/category sync | ⏳ Not started |
 | Settlement (Sepolia USDC transfer) | ⏳ Not started |
@@ -71,6 +71,22 @@ undefined rather than guessed. `ens/client.ts` (the real on-chain write path) is
 integration-test-only and flags exactly what must be re-verified against the live
 Sepolia deployment before the demo — ENSv2 Sepolia is an active beta and contract
 addresses have already been temporarily re-pointed once during this hackathon window.
+
+## Agent loop notes
+
+`agent/loop.ts` implements the PRD's multi-step tool-calling pattern (parse intent →
+`check_duplicate` → observe → `check_policy_limits` → `create_invoice` → return) against a
+vendor-agnostic `LlmClient` interface modeled on Anthropic's Messages API shape
+(system prompt, message list of content blocks, tool_use/tool_result blocks, a stop
+reason). This means the entire loop — multi-turn tool execution, error surfacing back to
+the LLM, unknown-tool handling, max-turn protection — is unit tested against a scripted
+fake client with zero network dependency; `agent/anthropicClient.ts` is the thin,
+integration-test-only translation to the real SDK.
+
+`check_policy_limits` inside the loop is advisory to the LLM's own reasoning only. Per the
+PRD's Security & Guardrails section, the authoritative policy check happens again,
+independently, via `policy/engine.ts` directly at settlement time — the loop's tool call is
+never trusted as the actual gate.
 
 ## Development
 

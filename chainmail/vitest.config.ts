@@ -15,6 +15,7 @@ export default defineConfig({
         "src/server.ts",
         "src/graph/client.ts",
         "src/ens/client.ts",
+        "src/agent/anthropicClient.ts",
         "src/**/*.d.ts",
       ],
     },

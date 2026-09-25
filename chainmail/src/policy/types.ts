@@ -46,7 +46,7 @@ export interface PolicyCandidate {
   readonly recipient: string;
   readonly amountUsd: number;
   /** Injectable for deterministic testing; defaults to `new Date()`. */
-  readonly now?: Date;
+  readonly now?: Date | undefined;
 }
 
 export type PolicyViolationCode =
