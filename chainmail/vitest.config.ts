@@ -17,6 +17,7 @@ export default defineConfig({
         "src/ens/client.ts",
         "src/agent/anthropicClient.ts",
         "src/ledger/graphSync.ts",
+        "src/settlement/client.ts",
         "src/**/*.d.ts",
       ],
     },

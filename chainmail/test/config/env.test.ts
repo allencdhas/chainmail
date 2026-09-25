@@ -12,6 +12,8 @@ const VALID_ENV = {
   ENS_PARENT_NAME: "chainmail.eth",
   ENS_SEPOLIA_RPC_URL: "https://sepolia.example.com/rpc",
   ENS_OWNER_PRIVATE_KEY: `0x${"1".repeat(64)}`,
+  TREASURY_PRIVATE_KEY: `0x${"2".repeat(64)}`,
+  MAGIC_LINK_JWT_SECRET: "a-jwt-signing-secret-at-least-32-chars",
   PORT: "3000",
 };
 
@@ -75,6 +77,18 @@ describe("loadEnv", () => {
         loadEnv({ ...VALID_ENV, ENS_OWNER_PRIVATE_KEY: bad } as NodeJS.ProcessEnv),
       ).toThrow(EnvValidationError);
     }
+  });
+
+  it("rejects a malformed TREASURY_PRIVATE_KEY", () => {
+    expect(() =>
+      loadEnv({ ...VALID_ENV, TREASURY_PRIVATE_KEY: "not-hex" } as NodeJS.ProcessEnv),
+    ).toThrow(EnvValidationError);
+  });
+
+  it("rejects a MAGIC_LINK_JWT_SECRET shorter than 32 characters", () => {
+    expect(() =>
+      loadEnv({ ...VALID_ENV, MAGIC_LINK_JWT_SECRET: "too-short" } as NodeJS.ProcessEnv),
+    ).toThrow(EnvValidationError);
   });
 
   it("rejects a missing ENS_PARENT_NAME", () => {

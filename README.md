@@ -24,8 +24,8 @@ integrated or pushed.
 | Agent loop (LLM tool-calling: check_duplicate → check_policy_limits → create_invoice) | ✅ Logic built + unit tested (100% on the loop itself, ~99% overall); `agent/anthropicClient.ts` wraps the real SDK and needs an API key to integration-test |
 | ENSv2 subname + Enhanced Access Control (role math, name encoding, `chainmail.proposal` record) | ✅ Logic built + unit tested (~99% on pure modules); `ens/client.ts` wraps real on-chain calls and needs a live Sepolia RPC + ABI verification to integration-test |
 | Ledger (live draft) + folder/category sync | ✅ Logic built + unit tested (100% on all pure modules); `ledger/graphSync.ts` orchestrates the real folder/category/draft Graph calls and needs a live mailbox to integration-test |
-| Settlement (Sepolia USDC transfer) | ⏳ Not started |
-| Magic link / payment token auth | ⏳ Not started |
+| Magic link / payment token auth (confirm_invoice + authorize_payment JWTs, single-use enforcement) | ✅ Built + unit tested, 100% line coverage — no integration-only split needed, JWT signing/verification has no network dependency |
+| Settlement (Sepolia USDC transfer) | ✅ Logic built + unit tested (100% on `usdcTransfer.ts`/`evaluateSettlement.ts`); `settlement/client.ts` sends the real on-chain transfer and needs a live Sepolia RPC + funded treasury to integration-test |
 | Mocked fiat checkout | ⏳ Not started |
 
 ## Custody model — read before touching the wallet module
@@ -111,6 +111,32 @@ matching color category (that part of the original design was always valid, sinc
 - `ledger/graphSync.ts` — integration-only orchestration of the real folder/category/draft
   Graph calls, idempotent by design (checks for existing folders/categories by name before
   creating).
+
+## Magic link / payment token auth — corrected sequence
+
+Per the corrected flow (fixing the approval/payment conflation blocker from the original
+build plan): the **Payee's** magic link only confirms the AI's parsed proposal and triggers
+sending the invoice to the Payer — it never moves funds. A second, separate one-time link is
+issued to the **Payer**; only that link's "Pay" click triggers settlement.
+
+- `auth/tokens.ts` — two non-interchangeable JWT purposes, `confirm_invoice` (15 min TTL) and
+  `authorize_payment` (24h TTL, with `recipient`/`amountUsd` bound at issue time). Purpose is
+  checked explicitly — a confirm token can never be used as a payment token or vice versa.
+  Tokens use explicit `iat`/`exp` claims and jsonwebtoken's `clockTimestamp` verify option, so
+  every expiry edge case is exactly reproducible in tests with no fake timers. Single-use is
+  enforced via a `ConsumedTokenStore` (in-memory here; needs a DB unique-constraint on `jti`
+  for real concurrent-request safety). No integration-only split was needed for this module —
+  JWT signing/verification has no network dependency, so it's 100% unit tested directly.
+- `settlement/evaluateSettlement.ts` — the **authoritative, settlement-time** policy re-check,
+  run immediately before transferring funds. Never trusts a proposal-time pass, since other
+  transactions may have landed in the (up to 24h) gap before the Payer clicks Pay — this is
+  directly unit tested against that exact race scenario.
+- `settlement/usdcTransfer.ts` — USD-to-USDC atomic-unit conversion (6 decimals, rounds rather
+  than truncates) and the ERC-20 `transfer` call-argument builder.
+- `settlement/client.ts` — integration-only viem wrapper for the real transfer. Uses the
+  standard ERC-20 interface (materially lower ABI-mismatch risk than the ENS module's
+  project-specific contracts), targeting Circle's Sepolia USDC
+  (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`).
 
 ## Development
 

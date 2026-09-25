@@ -32,6 +32,15 @@ const envSchema = z.object({
     .string()
     .regex(/^0x[0-9a-fA-F]{64}$/, "ENS_OWNER_PRIVATE_KEY must be a 0x-prefixed 32-byte hex string"),
 
+  // --- Settlement (Sepolia USDC) ---
+  /** Private key of the pre-funded treasury wallet that sends USDC to Payees at settlement. Testnet only. */
+  TREASURY_PRIVATE_KEY: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/, "TREASURY_PRIVATE_KEY must be a 0x-prefixed 32-byte hex string"),
+
+  // --- Auth (magic link / payment tokens) ---
+  MAGIC_LINK_JWT_SECRET: z.string().min(32),
+
   PORT: z.coerce.number().int().positive().default(3000),
 });
 
