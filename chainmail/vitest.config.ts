@@ -11,7 +11,12 @@ export default defineConfig({
       // src/server.ts: not yet created. src/graph/client.ts: thin real-network
       // wrapper around the Graph SDK, documented as integration-test-only in
       // its own file header — intentionally excluded from the coverage gate.
-      exclude: ["src/server.ts", "src/graph/client.ts", "src/**/*.d.ts"],
+      exclude: [
+        "src/server.ts",
+        "src/graph/client.ts",
+        "src/ens/client.ts",
+        "src/**/*.d.ts",
+      ],
     },
   },
 });

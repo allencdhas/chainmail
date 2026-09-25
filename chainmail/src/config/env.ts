@@ -22,6 +22,16 @@ const envSchema = z.object({
   /** Shared secret Graph echoes back on every notification; used to authenticate payloads. */
   GRAPH_WEBHOOK_CLIENT_STATE: z.string().min(16),
 
+  // --- ENSv2 (Sepolia) ---
+  /** The registered parent name, e.g. "chainmail.eth". */
+  ENS_PARENT_NAME: z.string().min(1),
+  /** Sepolia JSON-RPC endpoint used for both reads and writes. */
+  ENS_SEPOLIA_RPC_URL: z.string().url(),
+  /** Private key of the EOA that owns ENS_PARENT_NAME and can call authorize*Roles. Testnet only. */
+  ENS_OWNER_PRIVATE_KEY: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/, "ENS_OWNER_PRIVATE_KEY must be a 0x-prefixed 32-byte hex string"),
+
   PORT: z.coerce.number().int().positive().default(3000),
 });
 

@@ -9,6 +9,9 @@ const VALID_ENV = {
   GRAPH_MAILBOX_USER_ID: "alex@chainmail-hackathon.onmicrosoft.com",
   GRAPH_NOTIFICATION_URL: "https://chainmail.example.com/webhooks/graph",
   GRAPH_WEBHOOK_CLIENT_STATE: "a-shared-webhook-secret",
+  ENS_PARENT_NAME: "chainmail.eth",
+  ENS_SEPOLIA_RPC_URL: "https://sepolia.example.com/rpc",
+  ENS_OWNER_PRIVATE_KEY: `0x${"1".repeat(64)}`,
   PORT: "3000",
 };
 
@@ -58,6 +61,25 @@ describe("loadEnv", () => {
     expect(() =>
       loadEnv({ ...VALID_ENV, GRAPH_WEBHOOK_CLIENT_STATE: "short" } as NodeJS.ProcessEnv),
     ).toThrow(EnvValidationError);
+  });
+
+  it("rejects a non-URL ENS_SEPOLIA_RPC_URL", () => {
+    expect(() =>
+      loadEnv({ ...VALID_ENV, ENS_SEPOLIA_RPC_URL: "not-a-url" } as NodeJS.ProcessEnv),
+    ).toThrow(EnvValidationError);
+  });
+
+  it("rejects a malformed ENS_OWNER_PRIVATE_KEY", () => {
+    for (const bad of ["0xdeadbeef", "not-hex-at-all", "1".repeat(64)]) {
+      expect(() =>
+        loadEnv({ ...VALID_ENV, ENS_OWNER_PRIVATE_KEY: bad } as NodeJS.ProcessEnv),
+      ).toThrow(EnvValidationError);
+    }
+  });
+
+  it("rejects a missing ENS_PARENT_NAME", () => {
+    const { ENS_PARENT_NAME, ...rest } = VALID_ENV;
+    expect(() => loadEnv(rest as NodeJS.ProcessEnv)).toThrow(EnvValidationError);
   });
 
   it("rejects a non-positive PORT", () => {

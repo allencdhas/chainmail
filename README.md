@@ -22,7 +22,7 @@ integrated or pushed.
 | Deterministic wallet derivation (app-managed test wallet) | ✅ Built, 100% line coverage |
 | Microsoft Graph webhook ingestion (validation handshake, notification auth/dedupe, subscription lifecycle) | ✅ Logic built + unit tested (100% on pure modules); `graph/client.ts` wraps the real SDK and needs a live Azure AD tenant to integration-test |
 | Agent loop (LLM tool-calling) | ⏳ Not started |
-| ENSv2 subname + Enhanced Access Control | ⏳ Not started |
+| ENSv2 subname + Enhanced Access Control (role math, name encoding, `chainmail.proposal` record) | ✅ Logic built + unit tested (~99% on pure modules); `ens/client.ts` wraps real on-chain calls and needs a live Sepolia RPC + ABI verification to integration-test |
 | Ledger (live draft) + folder/category sync | ⏳ Not started |
 | Settlement (Sepolia USDC transfer) | ⏳ Not started |
 | Magic link / payment token auth | ⏳ Not started |
@@ -51,6 +51,26 @@ the (optional) WalletConnect-connected path.
 - Notifications are deduplicated, since Graph retries for up to 4 hours and duplicate
   subscriptions can double-deliver. See the caveat in `graph/notifications.ts` about the
   in-memory store's limits before deploying anywhere long-lived.
+
+## ENSv2 Enhanced Access Control — scope correction
+
+Per the feasibility review, Enhanced Access Control governs **ENS registry/resolver
+writes only** — it has no relationship to USDC transfers, and a raw ERC-20 send never
+consults it. The agent's delegated identity (`agent.<user>.chainmail.eth`) is granted
+exactly one real, narrow permission: `ROLE_SET_TEXT` scoped to the single
+`chainmail.proposal` text key on its own resolver (via `authorizeTextRoles`, not a
+name-level grant). This gives an honest, on-chain-auditable "the agent can only ever
+write this one record" story. **The actual spending gate remains the deterministic
+policy engine** (`policy/engine.ts`) plus the magic-link / pay-click authorizations — see
+`ens/proposalRecord.ts` for the full rationale.
+
+Role bitmap values in `ens/ensRoleConstants.ts` are sourced from ENS's own docs, each
+annotated with what was directly confirmed vs. inferred from the documented "4-bit nybble
++ paired admin role" pattern. `ROLE_SET_ADDR`/`ROLE_SET_DATA` are intentionally left
+undefined rather than guessed. `ens/client.ts` (the real on-chain write path) is
+integration-test-only and flags exactly what must be re-verified against the live
+Sepolia deployment before the demo — ENSv2 Sepolia is an active beta and contract
+addresses have already been temporarily re-pointed once during this hackathon window.
 
 ## Development
 
