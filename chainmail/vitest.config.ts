@@ -8,7 +8,10 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/**/*.ts"],
-      exclude: ["src/server.ts", "src/**/*.d.ts"],
+      // src/server.ts: not yet created. src/graph/client.ts: thin real-network
+      // wrapper around the Graph SDK, documented as integration-test-only in
+      // its own file header — intentionally excluded from the coverage gate.
+      exclude: ["src/server.ts", "src/graph/client.ts", "src/**/*.d.ts"],
     },
   },
 });
