@@ -23,7 +23,7 @@ integrated or pushed.
 | Microsoft Graph webhook ingestion (validation handshake, notification auth/dedupe, subscription lifecycle) | ✅ Logic built + unit tested (100% on pure modules); `graph/client.ts` wraps the real SDK and needs a live Azure AD tenant to integration-test |
 | Agent loop (LLM tool-calling: check_duplicate → check_policy_limits → create_invoice) | ✅ Logic built + unit tested (100% on the loop itself, ~99% overall); `agent/anthropicClient.ts` wraps the real SDK and needs an API key to integration-test |
 | ENSv2 subname + Enhanced Access Control (role math, name encoding, `chainmail.proposal` record) | ✅ Logic built + unit tested (~99% on pure modules); `ens/client.ts` wraps real on-chain calls and needs a live Sepolia RPC + ABI verification to integration-test |
-| Ledger (live draft) + folder/category sync | ⏳ Not started |
+| Ledger (live draft) + folder/category sync | ✅ Logic built + unit tested (100% on all pure modules); `ledger/graphSync.ts` orchestrates the real folder/category/draft Graph calls and needs a live mailbox to integration-test |
 | Settlement (Sepolia USDC transfer) | ⏳ Not started |
 | Magic link / payment token auth | ⏳ Not started |
 | Mocked fiat checkout | ⏳ Not started |
@@ -87,6 +87,30 @@ integration-test-only translation to the real SDK.
 PRD's Security & Guardrails section, the authoritative policy check happens again,
 independently, via `policy/engine.ts` directly at settlement time — the loop's tool call is
 never trusted as the actual gate.
+
+## Ledger — corrected design
+
+Per the feasibility review's first blocker: a **sent** Outlook message's body can only be
+PATCHed while `isDraft: true` — Graph has no "pin" API for mail at all (only for Teams
+chat). The ledger is therefore one persistent **draft** message living in `ChainMail/Ledger`,
+fully re-rendered and PATCHed in place on every transaction state change — never sent.
+Each individual transaction email is still filed into its state's folder and tagged with a
+matching color category (that part of the original design was always valid, since
+`categories`/`flag` remain updatable on sent messages regardless of draft status).
+
+- `ledger/stateMapping.ts` — direct encoding of the PRD's Transaction Lifecycle table
+  (5 states → folder path → category name/color).
+- `ledger/folderSync.ts` — plans the move + category patch for a state transition, always
+  stripping any stale ChainMail category from a prior state while preserving unrelated
+  user categories untouched.
+- `ledger/ledgerRenderer.ts` — renders the ledger draft's HTML body from scratch on every
+  update, with totals broken out by state and full HTML-escaping of user-supplied fields.
+- `ledger/categoryColors.ts` — maps our color keywords to Graph's `masterCategories` preset
+  enum; flagged as best-effort (not independently re-verified against fetched docs this
+  session) since a wrong swatch is cosmetic, not functional.
+- `ledger/graphSync.ts` — integration-only orchestration of the real folder/category/draft
+  Graph calls, idempotent by design (checks for existing folders/categories by name before
+  creating).
 
 ## Development
 

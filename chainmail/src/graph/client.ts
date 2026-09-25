@@ -94,4 +94,44 @@ export class GraphMailClient {
       .api(`/users/${this.mailboxUserId}/sendMail`)
       .post({ message, saveToSentItems });
   }
+
+  // --- Folders, categories, drafts (for ledger/folderSync orchestration) ---
+
+  async listMailFolders(parentFolderId?: string): Promise<Array<{ id: string; displayName: string }>> {
+    const path = parentFolderId
+      ? `/users/${this.mailboxUserId}/mailFolders/${parentFolderId}/childFolders`
+      : `/users/${this.mailboxUserId}/mailFolders`;
+    const response = await this.client.api(path).get();
+    return response.value ?? [];
+  }
+
+  async createMailFolder(
+    displayName: string,
+    parentFolderId?: string,
+  ): Promise<{ id: string; displayName: string }> {
+    const path = parentFolderId
+      ? `/users/${this.mailboxUserId}/mailFolders/${parentFolderId}/childFolders`
+      : `/users/${this.mailboxUserId}/mailFolders`;
+    return this.client.api(path).post({ displayName });
+  }
+
+  async listMasterCategories(): Promise<Array<{ id: string; displayName: string; color: string }>> {
+    const response = await this.client
+      .api(`/users/${this.mailboxUserId}/outlook/masterCategories`)
+      .get();
+    return response.value ?? [];
+  }
+
+  async createMasterCategory(displayName: string, color: string): Promise<void> {
+    await this.client
+      .api(`/users/${this.mailboxUserId}/outlook/masterCategories`)
+      .post({ displayName, color });
+  }
+
+  async createDraftMessage(input: {
+    subject: string;
+    body: { contentType: "HTML" | "Text"; content: string };
+  }): Promise<{ id: string }> {
+    return this.client.api(`/users/${this.mailboxUserId}/messages`).post(input);
+  }
 }
